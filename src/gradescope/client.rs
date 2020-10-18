@@ -129,34 +129,6 @@ impl GradescopeClient {
             }?;
 
             response.status() == 302
-/*
-            /* Check the status of the response and extract the HTML document */
-            let response_body = if response.status() == 200 {
-                match response.text() {
-                    Ok(text) => Ok(text),
-                    Err(_) => Err(ClientError::HttpError)
-                }
-            } else {
-                Err(ClientError::HttpError)
-            }?;
-
-            /* Parse the response */
-            let document = Html::parse_document(&response_body);
-
-            /* Get the page title */
-            let title = {
-                /* Create a selector */
-                let selector = Selector::parse("title").unwrap();
-
-                /* Find the element */
-                match document.select(&selector).next() {
-                    Some(elem) => Ok(elem),
-                    None => Err(ClientError::UnexpectedResponse),
-                }
-            }?.inner_html();
-
-            /* Make sure login was successful */
-            title == "Dashboard | Gradescope"*/
         };
 
         if login_successful {
