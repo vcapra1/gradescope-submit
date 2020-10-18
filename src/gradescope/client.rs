@@ -112,7 +112,7 @@ impl GradescopeClient {
         let login_successful = {
             /* Construct the body of the request */
             let request_body = format!("authenticity_token={}&session[email]={}\
-                &session[password]={}&session[remember_me]=0&commit=Log in\
+                &session[password]={}&session[remember_me]=1&commit=Log in\
                 &session[remember_me_sso]=0",
                 encode(&csrf_token), encode(&email), encode(&password));
 
@@ -226,7 +226,7 @@ impl GradescopeClient {
                 /* Create a new form and add text fields to it */
                 let form = Form::new()
                     .text("authenticity_token", csrf_token)
-                    .text("submission[method]", "uplaod");
+                    .text("submission[method]", "upload");
 
                 /* For each filename given, construct a part */
                 files.into_iter().fold(Ok(form), |form, path| {
@@ -254,8 +254,9 @@ impl GradescopeClient {
                 })?
             };
 
-            /* Build the request */
-            let request = self.http_client.post(&url).multipart(form);
+            let request = self.http_client.post(&url)
+                .multipart(form)
+                .header("Accept", "application/json");
 
             /* Send the request */
             let response = match request.send() {

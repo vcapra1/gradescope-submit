@@ -1,8 +1,9 @@
 [course]
 id = 171498
 name = "CMSC330"
-semester = "Fall 2020"
+term = "Fall 2020"
 
 [assignment]
 id = 702483
 name = "Project 2b"
+files = [ "src/main.rs", "src/config.rs" ]
