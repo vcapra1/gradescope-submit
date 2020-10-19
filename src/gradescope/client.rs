@@ -1,5 +1,5 @@
 use std::path::Path;
-use reqwest::{redirect::Policy, blocking::{Client, multipart::{Form, Part}}};
+use reqwest::{redirect::Policy, blocking::{Client, multipart::{Form, Part}}, Url};
 use scraper::{html::Html, selector::Selector};
 use urlencoding::encode;
 
@@ -24,17 +24,27 @@ impl GradescopeClient {
     ///
     /// [`GradescopeClient`]: struct.GradescopeClient.html
     ///
+    /// # Arguments
+    ///
+    /// * `token` - The secure token to use for authentication.
+    ///
     /// # Errors
     ///
     /// Returns [`InitError`] if there is an error setting up the client.
     ///
     /// [`InitError`]: enum.ClientError.html
     ///
-    pub fn new() -> Result<Self, ClientError> {
+    pub fn new(token: Option<String>) -> Result<Self, ClientError> {
         /* Create a new http client */
         let builder = Client::builder()
             .redirect(Policy::none())
             .cookie_store(true);
+
+        let builder = if let Some(ref token) = token {
+            builder.add_cookie("signed_token".into(), token.clone(), "www.gradescope.com".into(), "/".into(), &Url::parse("https://www.gradescope.com/login").unwrap())
+        } else {
+            builder
+        };
 
         /* Build the client */
         let http_client = match builder.build() {
@@ -42,13 +52,49 @@ impl GradescopeClient {
             Err(_) => Err(ClientError::InitError),
         }?;
 
-        Ok(GradescopeClient {
+        let mut client = GradescopeClient {
             http_client,
             logged_in: false,
-        })
+        };
+
+        /* Visit homepage to init cookies */
+        match client.http_client.get("https://www.gradescope.com/login").send() {
+            Ok(_) => Ok(()),
+            Err(_) => Err(ClientError::HttpError),
+        }?;
+
+        /* Check if logged in */
+        if let Some(_) = token {
+            if client.authenticated()? {
+                client.logged_in = true;
+            }
+        }
+
+        Ok(client)
     }
 
-    /// Given the email and password of a user, attempts to log in.
+    /// Returns whether of not the client is logged in.
+    pub fn is_logged_in(&self) -> bool {
+        self.logged_in
+    }
+
+    /// Check if the client is authenticated
+    fn authenticated(&self) -> Result<bool, ClientError> {
+        /* Make a request to the login page */
+        match self.http_client.get("https://www.gradescope.com/login").send() {
+            Ok(response) => {
+                match response.status().as_u16() {
+                    200 => Ok(false),
+                    302 => Ok(true),
+                    _ => Err(ClientError::HttpError)
+                }
+            }
+            Err(_) => Err(ClientError::HttpError)
+        }
+    }
+
+    /// Given the email and password of a user, attempts to log in.  On success, returns the
+    /// signed_token cookie.
     ///
     /// # Arguments
     ///
@@ -66,7 +112,7 @@ impl GradescopeClient {
     /// [`HttpError`]: enum.ClientError.html
     /// [`UnexpectedResponse`]: enum.ClientError.html
     ///
-    pub fn login(&mut self, email: String, password: String) -> Result<(), ClientError> {
+    pub fn login(&mut self, email: String, password: String) -> Result<String, ClientError> {
         /* Acquire a CSRF token */
         let csrf_token = {
             /* Make the initial request to the login page */
@@ -109,7 +155,7 @@ impl GradescopeClient {
         };
 
         /* Make the login request with the credentials and token */
-        let login_successful = {
+        let (login_successful, token_cookie) = {
             /* Construct the body of the request */
             let request_body = format!("authenticity_token={}&session[email]={}\
                 &session[password]={}&session[remember_me]=1&commit=Log in\
@@ -128,14 +174,29 @@ impl GradescopeClient {
                 Err(_) => Err(ClientError::HttpError),
             }?;
 
-            response.status() == 302
+            /* If response status is 302, good */
+            if response.status() == 302 {
+                /* Find the signed_token cookie */
+                if let Some(cookie) = response.cookies().find(|cookie| cookie.name() == "signed_token") {
+                    (true, Some(cookie.value().to_string()))
+                } else {
+                    (false, None)
+                }
+            } else {
+                (false, None)
+            }
         };
 
         if login_successful {
             /* Set logged in flag */
             self.logged_in = true;
 
-            Ok(())
+            /* Get the token cookie */
+            if let Some(cookie) = token_cookie {
+                Ok(cookie)
+            } else {
+                Err(ClientError::HttpError)
+            }
         } else {
             Err(ClientError::InvalidLogin)
         }
@@ -155,7 +216,7 @@ impl GradescopeClient {
     /// # Errors
     ///
     /// If there is an error while communicating with [Gradescope], [`HttpError`] will be returned.
-    /// If the user is not logged in, [`InvalidState`] will be returned.  If a response is received
+    /// If the token doesn't work, [`InvalidToken`] will be returned.  If a response is received
     /// that cannot be parsed, [`UnexpectedResponse`] will be returned.
     ///
     /// [Gradescope]: https://www.gradescope.com/
