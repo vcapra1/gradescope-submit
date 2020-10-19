@@ -58,7 +58,7 @@ impl GradescopeClient {
         };
 
         /* Visit homepage to init cookies */
-        match client.http_client.get("https://www.gradescope.com/login").send() {
+        match client.http_client.get("https://www.gradescope.com").send() {
             Ok(_) => Ok(()),
             Err(_) => Err(ClientError::HttpError),
         }?;
@@ -84,9 +84,12 @@ impl GradescopeClient {
         match self.http_client.get("https://www.gradescope.com/login").send() {
             Ok(response) => {
                 match response.status().as_u16() {
-                    200 => Ok(false),
-                    302 => Ok(true),
-                    _ => Err(ClientError::HttpError)
+                    404 => Ok(false),
+                    401 => Ok(true),
+                    e => {
+                        println!("{}", e);
+                        Err(ClientError::HttpError)
+                    }
                 }
             }
             Err(_) => Err(ClientError::HttpError)
