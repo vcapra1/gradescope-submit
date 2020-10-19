@@ -130,7 +130,13 @@ fn main() {
     /* Create a client which will perform all communications with Gradescope */
     let client = {
         /* Initialize client */
-        let mut client = GradescopeClient::new(load_cookie_from_file()).unwrap();
+        let mut client = match GradescopeClient::new(load_cookie_from_file()) {
+            Ok(client) => client,
+            Err(_) => {
+                eprintln!("There was an error, please try again.");
+                exit(1);
+            }
+        };
 
         /* If the client is not logged in, request username and password */
         if !client.is_logged_in() {
