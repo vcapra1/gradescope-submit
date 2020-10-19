@@ -381,7 +381,7 @@ dependencies = [
 
 [[package]]
 name = "gradescope-submit"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "dirs",
  "reqwest-vcapra1-add-cookies",
