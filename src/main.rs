@@ -53,7 +53,7 @@ fn load_cookie_from_file() -> Option<String> {
 
         /* Read the token from the file */
         match fs::read_to_string(token_file) {
-            Ok(token) => Some(token),
+            Ok(token) => Some(token.trim().into()),
             Err(_) => None,
         }
     } else {
