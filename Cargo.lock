@@ -384,7 +384,7 @@ name = "gradescope-submit"
 version = "0.1.0"
 dependencies = [
  "dirs",
- "reqwest",
+ "reqwest-vcapra1-add-cookies",
  "rpassword",
  "scraper",
  "serde",
@@ -1005,9 +1005,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "reqwest"
-version = "0.10.8"
-source = "git+https://github.com/vcapra1/reqwest?branch=add-cookie#5763cb3bf5f63b0941b357d05b0abdd8400a8918"
+name = "reqwest-vcapra1-add-cookies"
+version = "0.10.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6475d12431d4cf74b10e0ea138c2b83dee73c916323482e5f0d0a065160be595"
 dependencies = [
  "base64 0.13.0",
  "bytes",

@@ -10,7 +10,7 @@ repository = "https://github.com/vcapra1/gradescope-submit"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = { git = "https://github.com/vcapra1/reqwest", branch="add-cookie", version = "0.10.8", features = ["blocking", "cookies", "json"] }
+reqwest = { package = "reqwest-vcapra1-add-cookies", version = "0.10.8", features = ["blocking", "cookies", "json"] }
 rpassword = "0.4"
 scraper = "0.12"
 urlencoding = "1.1"
