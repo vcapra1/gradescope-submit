@@ -388,6 +388,7 @@ dependencies = [
  "rpassword",
  "scraper",
  "serde",
+ "serde_json",
  "toml",
  "urlencoding",
 ]

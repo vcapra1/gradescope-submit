@@ -5,6 +5,7 @@ extern crate rpassword;
 extern crate toml;
 extern crate serde;
 extern crate dirs;
+extern crate serde_json;
 
 mod gradescope;
 mod config;
@@ -139,5 +140,19 @@ fn main() {
         client
     };
 
-    client.submit_files(config.course.id, config.assignment.id, config.assignment.files).unwrap();
+    match client.submit_files(config.course.id, config.assignment.id, config.assignment.files) {
+        Ok(url) => {
+            let url = if let Some(url) = url {
+                url
+            } else {
+                format!("https://www.gradescope.com/courses/{}/assignments/{}", config.course.id, config.assignment.id)
+            };
+
+            println!("Submitted successfully!  Go to {} to see the results.", url);
+        }
+        Err(_) => {
+            eprintln!("There was an error, please try again.");
+            exit(1);
+        }
+    }
 }

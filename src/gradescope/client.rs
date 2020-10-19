@@ -16,6 +16,14 @@ pub enum ClientError {
     InvalidLogin,
     InvalidState,
     FileError(String),
+    SubmitError(String),
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct SubmitResponse {
+    success: Option<bool>,
+    error: Option<String>,
+    url: Option<String>,
 }
 
 impl GradescopeClient {
@@ -81,7 +89,8 @@ impl GradescopeClient {
     /// Check if the client is authenticated
     fn authenticated(&self) -> Result<bool, ClientError> {
         /* Make a request to the login page */
-        match self.http_client.get("https://www.gradescope.com/login").send() {
+        match self.http_client.get("https://www.gradescope.com/login")
+            .header("Accept", "application/json").send() {
             Ok(response) => {
                 match response.status().as_u16() {
                     404 => Ok(false),
@@ -206,7 +215,7 @@ impl GradescopeClient {
     }
 
     /// Submit a set of files from the local machine to the [Gradescope] assignment with the
-    /// specified ID.
+    /// specified ID.  On success, returns the submission URL.
     ///
     /// # Arguments
     ///
@@ -230,7 +239,7 @@ impl GradescopeClient {
     pub fn submit_files<T: AsRef<Path>>(&self,
                                         course_id: u64,
                                         assignment_id: u64,
-                                        files: Vec<T>) -> Result<(), ClientError> {
+                                        files: Vec<T>) -> Result<Option<String>, ClientError> {
         /* Make sure we are logged in */
         if !self.logged_in {
             return Err(ClientError::InvalidState);
@@ -283,7 +292,8 @@ impl GradescopeClient {
         /* Submit the files to the project page */
         {
             /* Construct the URL */
-            let url = format!("https://www.gradescope.com/courses/{}/assignments/{}/submissions", course_id, assignment_id);
+            let url = format!("https://www.gradescope.com/courses/{}/assignments/{}/submissions",
+                              course_id, assignment_id);
 
             /* Build the multipart form with all the file */
             let form = {
@@ -328,8 +338,24 @@ impl GradescopeClient {
                 Err(_) => Err(ClientError::HttpError),
             }?;
 
-            println!("{}", response.text().unwrap());
-            todo!();
+            /* Parse the response */
+            let response: SubmitResponse = match serde_json::from_str(&response.text().unwrap()) {
+                Ok(response) => Ok(response),
+                Err(_) => Err(ClientError::UnexpectedResponse),
+            }?;
+
+            /* Check for errors */
+            if let Some(error) = response.error {
+                Err(ClientError::SubmitError(error))
+            } else if let Some(true) = response.success {
+                if let Some(url) = response.url {
+                    Ok(Some(format!("https://www.gradescope.com{}", url)))
+                } else {
+                    Ok(None)
+                }
+            } else {
+                Err(ClientError::SubmitError("".into()))
+            }
         }
     }
 }
