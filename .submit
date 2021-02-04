@@ -6,4 +6,4 @@ term = "Fall 2020"
 [assignment]
 id = 702483
 name = "Project 2b"
-files = [ "src/main.rs", "src/config.rs" ]
+files = [ "src/main.rs", "src/config.rst" ]

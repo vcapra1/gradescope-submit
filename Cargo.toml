@@ -1,6 +1,6 @@
 [package]
 name = "gradescope-submit"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Vinnie Caprarola <vinnie@vcaprarola.me>"]
 edition = "2018"
 description = "Program that submits files to Gradescope from the command-line"

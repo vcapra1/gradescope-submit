@@ -11,7 +11,7 @@ pub struct GradescopeClient {
 #[derive(Debug)]
 pub enum ClientError {
     InitError,
-    HttpError,
+    HttpError(Option<reqwest::Error>),
     UnexpectedResponse,
     InvalidLogin,
     InvalidState,
@@ -68,7 +68,7 @@ impl GradescopeClient {
         /* Visit homepage to init cookies */
         match client.http_client.get("https://www.gradescope.com").send() {
             Ok(_) => Ok(()),
-            Err(_) => Err(ClientError::HttpError),
+            Err(e) => Err(ClientError::HttpError(Some(e))),
         }?;
 
         /* Check if logged in */
@@ -95,13 +95,12 @@ impl GradescopeClient {
                 match response.status().as_u16() {
                     404 => Ok(false),
                     401 => Ok(true),
-                    e => {
-                        println!("{}", e);
-                        Err(ClientError::HttpError)
+                    _ => {
+                        Err(ClientError::HttpError(None))
                     }
                 }
             }
-            Err(_) => Err(ClientError::HttpError)
+            Err(e) => Err(ClientError::HttpError(Some(e)))
         }
     }
 
@@ -130,17 +129,17 @@ impl GradescopeClient {
             /* Make the initial request to the login page */
             let response = match self.http_client.get("https://www.gradescope.com/login").send() {
                 Ok(response) => Ok(response),
-                Err(_) => Err(ClientError::HttpError),
+                Err(e) => Err(ClientError::HttpError(Some(e))),
             }?;
 
             /* Check the status of the response and extract the HTML document */
             let response_body = if response.status() == 200 {
                 match response.text() {
                     Ok(text) => Ok(text),
-                    Err(_) => Err(ClientError::HttpError)
+                    Err(e) => Err(ClientError::HttpError(Some(e)))
                 }
             } else {
-                Err(ClientError::HttpError)
+                Err(ClientError::HttpError(None))
             }?;
 
             /* Parse the response */
@@ -183,7 +182,7 @@ impl GradescopeClient {
             /* Make a POST request to the login page */
             let response = match request.send() {
                 Ok(response) => Ok(response),
-                Err(_) => Err(ClientError::HttpError),
+                Err(e) => Err(ClientError::HttpError(Some(e))),
             }?;
 
             /* If response status is 302, good */
@@ -207,7 +206,7 @@ impl GradescopeClient {
             if let Some(cookie) = token_cookie {
                 Ok(cookie)
             } else {
-                Err(ClientError::HttpError)
+                Err(ClientError::HttpError(None))
             }
         } else {
             Err(ClientError::InvalidLogin)
@@ -253,17 +252,17 @@ impl GradescopeClient {
             /* Make the initial request to the login page */
             let response = match self.http_client.get(&url).send() {
                 Ok(response) => Ok(response),
-                Err(_) => Err(ClientError::HttpError),
+                Err(e) => Err(ClientError::HttpError(Some(e))),
             }?;
 
             /* Check the status of the response and extract the HTML document */
             let response_body = if response.status() == 200 {
                 match response.text() {
                     Ok(text) => Ok(text),
-                    Err(_) => Err(ClientError::HttpError)
+                    Err(e) => Err(ClientError::HttpError(Some(e)))
                 }
             } else {
-                Err(ClientError::HttpError)
+                Err(ClientError::HttpError(None))
             }?;
 
             /* Parse the response */
@@ -335,7 +334,7 @@ impl GradescopeClient {
             /* Send the request */
             let response = match request.send() {
                 Ok(response) => Ok(response),
-                Err(_) => Err(ClientError::HttpError),
+                Err(e) => Err(ClientError::HttpError(Some(e))),
             }?;
 
             /* Parse the response */
@@ -357,5 +356,21 @@ impl GradescopeClient {
                 Err(ClientError::SubmitError("".into()))
             }
         }
+    }
+}
+
+impl std::fmt::Display for ClientError {
+    fn fmt(&self, f: &'_ mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            ClientError::InitError => write!(f, "init error"),
+            ClientError::HttpError(Some(ref e)) => write!(f, "{}", e),
+            ClientError::HttpError(None) => write!(f, "http error"),
+            ClientError::UnexpectedResponse => write!(f, "unexpected response"),
+            ClientError::InvalidLogin => write!(f, "invalid login"),
+            ClientError::InvalidState => write!(f, "invalid state"),
+            ClientError::FileError(ref file) => write!(f, "file error for {}", file),
+            ClientError::SubmitError(ref err) => write!(f, "submit error: {}", err),
+        }?;
+        Ok(())
     }
 }

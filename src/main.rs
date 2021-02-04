@@ -107,8 +107,8 @@ fn login_prompt(client: &mut GradescopeClient) {
             eprintln!("It looks like you entered an incorrect email and/or password!");
             exit(1);
         }
-        Err(_) => {
-            eprintln!("There was an error, please try again.");
+        Err(e) => {
+            eprintln!("There was an error, please try again.  Error info: {}", e);
             exit(1);
         }
         Ok(token) => {
@@ -132,8 +132,8 @@ fn main() {
         /* Initialize client */
         let mut client = match GradescopeClient::new(load_cookie_from_file()) {
             Ok(client) => client,
-            Err(_) => {
-                eprintln!("There was an error, please try again.");
+            Err(e) => {
+                eprintln!("There was an error, please try again.  Error info: {}", e);
                 exit(1);
             }
         };
@@ -156,8 +156,8 @@ fn main() {
 
             println!("Submitted successfully!  Go to {} to see the results.", url);
         }
-        Err(_) => {
-            eprintln!("There was an error, please try again.");
+        Err(e) => {
+            eprintln!("There was an error, please try again.  Error info: {}", e);
             exit(1);
         }
     }
